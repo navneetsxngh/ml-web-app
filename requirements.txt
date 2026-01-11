@@ -1,6 +1,7 @@
 Flask
 gunicorn
 mysql-connector-python
+psycopg2-binary
 pandas
 numpy
 matplotlib
@@ -9,4 +10,3 @@ scikit-learn
 Werkzeug
 lxml
 python-dotenv
-psycopg2-binary

@@ -1,8 +1,4 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
-import mysql.connector
-from mysql.connector import Error
-import psycopg2
-from psycopg2 import Error
 import pandas as pd
 import numpy as np
 import json
@@ -26,6 +22,21 @@ warnings.filterwarnings('ignore')
 # Load environment variables
 load_dotenv()
 
+# Detect database type and import appropriate library
+DATABASE_URL = os.getenv('DATABASE_URL', '')  # Render PostgreSQL uses this
+USE_POSTGRESQL = bool(DATABASE_URL)
+
+if USE_POSTGRESQL:
+    # Production: PostgreSQL (Render)
+    import psycopg2
+    from psycopg2 import Error
+    print("🐘 Using PostgreSQL (Render)")
+else:
+    # Local: MySQL
+    import mysql.connector
+    from mysql.connector import Error
+    print("🐬 Using MySQL (Local)")
+
 app = Flask(__name__)
 
 # Production-ready configuration using environment variables
@@ -33,24 +44,22 @@ app.secret_key = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-product
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=int(os.getenv('SESSION_LIFETIME_HOURS', 2)))
 app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_CONTENT_LENGTH', 64 * 1024 * 1024))
 
-# Database Configuration - Automatically loads from .env file
-# Make sure you've configured your .env file with your MySQL credentials
-# See ENV_SETUP_GUIDE.md or run: python setup_env.py
-# For PostgreSQL
-DATABASE_URL = os.getenv('DATABASE_URL', '')
-
-if DATABASE_URL:
-    # Production: Use Render PostgreSQL connection string
+# Database Configuration
+# Automatically detects if running on Render (PostgreSQL) or Local (MySQL)
+if USE_POSTGRESQL:
+    # Render PostgreSQL - uses DATABASE_URL
     DB_CONFIG = DATABASE_URL
+    DB_TYPE = 'postgresql'
 else:
-    # Local development: Use individual parameters
+    # Local MySQL - uses individual parameters from .env
     DB_CONFIG = {
         'host': os.getenv('DB_HOST', 'localhost'),
-        'port': int(os.getenv('DB_PORT', 5432)),
-        'user': os.getenv('DB_USER', 'postgres'),
+        'port': int(os.getenv('DB_PORT', 3306)),
+        'user': os.getenv('DB_USER', 'root'),
         'password': os.getenv('DB_PASSWORD', 'password'),
         'database': os.getenv('DB_NAME', 'ml_webapp_db')
     }
+    DB_TYPE = 'mysql'
 
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {'csv', 'json', 'xml'}
@@ -59,39 +68,46 @@ def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def get_db_connection():
-    """Create and return a database connection"""
+    """Create and return a database connection (works for both MySQL and PostgreSQL)"""
     try:
-        if isinstance(DB_CONFIG, str):
-            # Using DATABASE_URL (production)
+        if DB_TYPE == 'postgresql':
+            # PostgreSQL connection
             connection = psycopg2.connect(DB_CONFIG)
+            connection.autocommit = False
         else:
-            # Using individual parameters (local)
-            connection = psycopg2.connect(
-                host=DB_CONFIG['host'],
-                port=DB_CONFIG['port'],
-                user=DB_CONFIG['user'],
-                password=DB_CONFIG['password'],
-                database=DB_CONFIG['database']
-            )
+            # MySQL connection
+            connection = mysql.connector.connect(**DB_CONFIG)
         return connection
     except Error as e:
-        print(f"Error connecting to PostgreSQL: {e}")
+        print(f"Error connecting to {DB_TYPE}: {e}")
         return None
 
 def init_database():
     """Initialize the database if it doesn't exist"""
     try:
-        # For PostgreSQL, database is already created by Render
-        # Just verify connection
-        conn = get_db_connection()
-        if conn:
-            print(f"Database connection is ready.")
+        if DB_TYPE == 'postgresql':
+            # PostgreSQL: Database is already created by Render
+            conn = get_db_connection()
+            if conn:
+                print(f"Database connection is ready (PostgreSQL).")
+                conn.close()
+        else:
+            # MySQL: Create database if it doesn't exist
+            conn = mysql.connector.connect(
+                host=DB_CONFIG['host'],
+                user=DB_CONFIG['user'],
+                password=DB_CONFIG['password']
+            )
+            cursor = conn.cursor()
+            cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DB_CONFIG['database']}")
+            cursor.close()
             conn.close()
+            print(f"Database '{DB_CONFIG['database']}' is ready (MySQL).")
     except Error as e:
-        print(f"Error connecting to database: {e}")
+        print(f"Error creating database: {e}")
 
 def save_dataframe_to_db(df, table_name):
-    """Save a pandas DataFrame to MySQL database"""
+    """Save a pandas DataFrame to database (works for both MySQL and PostgreSQL)"""
     try:
         connection = get_db_connection()
         if connection is None:
@@ -100,7 +116,7 @@ def save_dataframe_to_db(df, table_name):
         cursor = connection.cursor()
         
         # Drop table if exists
-        cursor.execute(f"DROP TABLE IF EXISTS `{table_name}`")
+        cursor.execute(f"DROP TABLE IF EXISTS {table_name}")
         
         # Create table dynamically based on DataFrame columns
         columns_sql = []
@@ -108,21 +124,32 @@ def save_dataframe_to_db(df, table_name):
             # Determine SQL data type based on pandas dtype
             dtype = df[col].dtype
             if dtype == 'int64':
-                sql_type = 'INT'
+                sql_type = 'INTEGER' if DB_TYPE == 'postgresql' else 'INT'
             elif dtype == 'float64':
-                sql_type = 'DOUBLE'
+                sql_type = 'DOUBLE PRECISION' if DB_TYPE == 'postgresql' else 'DOUBLE'
             else:
                 sql_type = 'TEXT'
-            columns_sql.append(f"`{col}` {sql_type}")
+            
+            # Handle column names with spaces or special characters
+            col_name = f'"{col}"' if DB_TYPE == 'postgresql' else f'`{col}`'
+            columns_sql.append(f'{col_name} {sql_type}')
         
-        create_table_sql = f"CREATE TABLE `{table_name}` ({', '.join(columns_sql)})"
+        create_table_sql = f"CREATE TABLE {table_name} ({', '.join(columns_sql)})"
         cursor.execute(create_table_sql)
         
-        # Insert data
+        # Insert data with appropriate placeholder
+        placeholder = '%s'  # Works for both MySQL and PostgreSQL
+        
         for _, row in df.iterrows():
-            placeholders = ', '.join(['%s'] * len(row))
-            columns = ', '.join([f"`{col}`" for col in df.columns])
-            insert_sql = f"INSERT INTO `{table_name}` ({columns}) VALUES ({placeholders})"
+            placeholders = ', '.join([placeholder] * len(row))
+            
+            # Column names with proper quoting
+            if DB_TYPE == 'postgresql':
+                columns = ', '.join([f'"{col}"' for col in df.columns])
+            else:
+                columns = ', '.join([f'`{col}`' for col in df.columns])
+            
+            insert_sql = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
             cursor.execute(insert_sql, tuple(row))
         
         connection.commit()
@@ -131,16 +158,18 @@ def save_dataframe_to_db(df, table_name):
         return True
     except Error as e:
         print(f"Error saving DataFrame to database: {e}")
+        if connection:
+            connection.rollback()
         return False
 
 def load_dataframe_from_db(table_name):
-    """Load a pandas DataFrame from MySQL database"""
+    """Load a pandas DataFrame from database (works for both MySQL and PostgreSQL)"""
     try:
         connection = get_db_connection()
         if connection is None:
             return None
         
-        query = f"SELECT * FROM `{table_name}`"
+        query = f"SELECT * FROM {table_name}"
         df = pd.read_sql(query, connection)
         connection.close()
         return df
