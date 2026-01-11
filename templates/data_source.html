@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Web App - Select Data Source</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1 class="page-title">Select Your Data Source</h1>
+        <p class="page-description">Choose how you'd like to provide your data</p>
+        
+        <div class="cards-container">
+            <div class="card">
+                <div class="card-icon">✏️</div>
+                <h2>Create CSV Manually</h2>
+                <p>Define your own columns and enter data row by row</p>
+                <a href="{{ url_for('create_csv') }}" class="btn btn-primary">Create Data</a>
+            </div>
+            
+            <div class="card">
+                <div class="card-icon">📁</div>
+                <h2>Upload Data File</h2>
+                <p>Upload your CSV, JSON, or XML file (Max 64MB)</p>
+                <a href="{{ url_for('upload_data') }}" class="btn btn-primary">Upload File</a>
+            </div>
+        </div>
+        
+        <div class="navigation">
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">← Back to Home</a>
+        </div>
+    </div>
+</body>
+</html>

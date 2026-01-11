@@ -1,0 +1,11 @@
+Flask
+gunicorn
+mysql-connector-python
+pandas
+numpy
+matplotlib
+seaborn
+scikit-learn
+Werkzeug
+lxml
+python-dotenv

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Web App - Data Visualization</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1 class="page-title">Data Visualization & Inspection</h1>
+        
+        <div class="viz-section">
+            <h2>Dataset Preview (First 10 Rows)</h2>
+            <div class="table-container">
+                {{ head_html|safe }}
+            </div>
+        </div>
+        
+        <div class="viz-section">
+            <h2>DataFrame Information</h2>
+            <pre class="info-box">{{ info }}</pre>
+        </div>
+        
+        <div class="viz-section">
+            <h2>Data Types</h2>
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Column</th>
+                            <th>Data Type</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for col, dtype in dtypes.items() %}
+                        <tr>
+                            <td>{{ col }}</td>
+                            <td>{{ dtype }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="viz-section">
+            <h2>Statistical Summary</h2>
+            <div class="table-container">
+                {{ describe_html|safe }}
+            </div>
+        </div>
+        
+        <div class="viz-section">
+            <h2>Value Counts</h2>
+            <p>Select columns to see their value distributions:</p>
+            
+            <div class="checkbox-container">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="selectAll" onchange="toggleSelectAll()">
+                    Select All
+                </label>
+            </div>
+            
+            <div class="checkbox-container">
+                {% for col in columns %}
+                <label class="checkbox-label">
+                    <input type="checkbox" class="column-checkbox" value="{{ col }}">
+                    {{ col }}
+                </label>
+                {% endfor %}
+            </div>
+            
+            <button onclick="getValueCounts()" class="btn btn-primary">Show Value Counts</button>
+            
+            <div id="valueCountsResult" style="margin-top: 20px;"></div>
+        </div>
+        
+        <div class="navigation">
+            <a href="{{ url_for('data_source') }}" class="btn btn-secondary">← Back</a>
+            <a href="{{ url_for('preprocessing') }}" class="btn btn-primary">Next: Preprocessing →</a>
+        </div>
+        
+        <div id="message" class="message"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/visualization.js') }}"></script>
+</body>
+</html>

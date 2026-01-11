@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Web App - Preprocessing</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1 class="page-title">Data Preprocessing Station</h1>
+        
+        <!-- Missing Values Section -->
+        <div class="preprocess-section">
+            <h2>1. Handle Missing Values</h2>
+            <div class="form-group">
+                <label>Select Method:</label>
+                <select id="missingMethod" class="form-control">
+                    <option value="">-- Select Method --</option>
+                    <option value="drop">Drop Rows with Missing Values</option>
+                    <option value="mean">Fill with Mean (Numeric Only)</option>
+                    <option value="median">Fill with Median (Numeric Only)</option>
+                    <option value="mode">Fill with Mode (All Columns)</option>
+                </select>
+                <button onclick="handleMissing()" class="btn btn-primary" style="margin-top: 10px;">Apply</button>
+            </div>
+        </div>
+        
+        <!-- Outlier Management Section -->
+        <div class="preprocess-section">
+            <h2>2. Outlier Management</h2>
+            <p>Select numeric columns to detect and handle outliers:</p>
+            
+            <div class="checkbox-container">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="selectAllOutliers" onchange="toggleSelectAllOutliers()">
+                    Select All
+                </label>
+            </div>
+            
+            <div class="checkbox-container">
+                {% for col in numeric_columns %}
+                <label class="checkbox-label">
+                    <input type="checkbox" class="outlier-checkbox" value="{{ col }}">
+                    {{ col }}
+                </label>
+                {% endfor %}
+            </div>
+            
+            <button onclick="visualizeOutliers()" class="btn btn-info">Visualize Outliers</button>
+            
+            <div id="outlierVisualization" style="margin-top: 20px;"></div>
+            
+            <div class="form-group" style="margin-top: 20px;">
+                <label>Handling Method:</label>
+                <select id="outlierMethod" class="form-control">
+                    <option value="">-- Select Method --</option>
+                    <option value="capping">Capping (Winsorizing)</option>
+                    <option value="trimming">Trimming (Remove Outliers)</option>
+                </select>
+                <button onclick="handleOutliers()" class="btn btn-primary" style="margin-top: 10px;">Handle Outliers</button>
+            </div>
+            
+            <div id="outlierResult" style="margin-top: 20px;"></div>
+        </div>
+        
+        <!-- Encoding Section -->
+        <div class="preprocess-section">
+            <h2>3. Categorical Encoding</h2>
+            <p>Select categorical columns to encode:</p>
+            
+            <div class="checkbox-container">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="selectAllEncoding" onchange="toggleSelectAllEncoding()">
+                    Select All
+                </label>
+            </div>
+            
+            <div class="checkbox-container">
+                {% for col in categorical_columns %}
+                <label class="checkbox-label">
+                    <input type="checkbox" class="encoding-checkbox" value="{{ col }}">
+                    {{ col }}
+                </label>
+                {% endfor %}
+            </div>
+            
+            <div class="form-group">
+                <label>Encoding Method:</label>
+                <select id="encodingMethod" class="form-control">
+                    <option value="">-- Select Method --</option>
+                    <option value="label">Label Encoding</option>
+                    <option value="ordinal">Ordinal Encoding</option>
+                </select>
+                <button onclick="encodeData()" class="btn btn-primary" style="margin-top: 10px;">Apply Encoding</button>
+            </div>
+        </div>
+        
+        <!-- Scaling Section -->
+        <div class="preprocess-section">
+            <h2>4. Feature Scaling</h2>
+            <p>Select numeric columns to scale:</p>
+            
+            <div class="checkbox-container">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="selectAllScaling" onchange="toggleSelectAllScaling()">
+                    Select All
+                </label>
+            </div>
+            
+            <div class="checkbox-container">
+                {% for col in numeric_columns %}
+                <label class="checkbox-label">
+                    <input type="checkbox" class="scaling-checkbox" value="{{ col }}">
+                    {{ col }}
+                </label>
+                {% endfor %}
+            </div>
+            
+            <div class="form-group">
+                <label>Scaling Method:</label>
+                <select id="scalingMethod" class="form-control">
+                    <option value="">-- Select Method --</option>
+                    <option value="standard">Standard Scaler (Z-score)</option>
+                    <option value="minmax">MinMax Scaler (0-1)</option>
+                </select>
+                <button onclick="scaleData()" class="btn btn-primary" style="margin-top: 10px;">Apply Scaling</button>
+            </div>
+        </div>
+        
+        <div class="navigation">
+            <a href="{{ url_for('visualization') }}" class="btn btn-secondary">← Back</a>
+            <a href="{{ url_for('training') }}" class="btn btn-primary">Next: Model Training →</a>
+        </div>
+        
+        <div id="message" class="message"></div>
+        <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+            <div class="spinner"></div>
+            <p>Processing...</p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/preprocessing.js') }}"></script>
+</body>
+</html>

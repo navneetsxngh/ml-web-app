@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Web App - Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container landing-page">
+        <div class="hero-section">
+            <h1 class="main-title">Introduction to Machine Learning</h1>
+            <p class="subtitle">Upload, Train, Predict</p>
+            <div class="description">
+                <p>Welcome to our interactive Machine Learning platform! This application allows you to:</p>
+                <ul class="features-list">
+                    <li>📊 Upload or create your own datasets</li>
+                    <li>🔍 Visualize and explore your data</li>
+                    <li>⚙️ Preprocess data with professional tools</li>
+                    <li>🤖 Train machine learning models</li>
+                    <li>🎯 Make predictions on new data</li>
+                </ul>
+            </div>
+            <a href="{{ url_for('data_source') }}" class="btn btn-primary btn-large">Get Started</a>
+        </div>
+        <div class="ml-illustration">
+            <div class="ml-icon">🚀</div>
+        </div>
+    </div>
+</body>
+</html>

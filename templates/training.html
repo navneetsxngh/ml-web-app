@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Web App - Model Training</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1 class="page-title">Model Training</h1>
+        
+        <div class="training-section">
+            <h2>1. Select Algorithm</h2>
+            <div class="form-group">
+                <label>Machine Learning Algorithm:</label>
+                <select id="algorithm" class="form-control" onchange="updateAlgorithmOptions()">
+                    <option value="">-- Select Algorithm --</option>
+                    <option value="linear">Linear Regression</option>
+                    <option value="ridge">Ridge Regression</option>
+                    <option value="lasso">Lasso Regression</option>
+                    <option value="logistic">Logistic Regression</option>
+                </select>
+            </div>
+            
+            <div id="algorithmInfo" class="info-box" style="display: none; margin-top: 10px;"></div>
+        </div>
+        
+        <div class="training-section">
+            <h2>2. Configure Training Parameters</h2>
+            
+            <div class="form-group">
+                <label>Target Variable:</label>
+                <select id="targetVariable" class="form-control">
+                    <option value="">-- Select Target Column --</option>
+                    {% for col in columns %}
+                    <option value="{{ col }}">{{ col }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label>Test Size (0.0 - 1.0):</label>
+                <input type="number" id="testSize" class="form-control" value="0.2" min="0.01" max="0.99" step="0.01">
+                <small>Percentage of data to use for testing (e.g., 0.2 = 20%)</small>
+            </div>
+            
+            <div class="form-group">
+                <label>Random State:</label>
+                <input type="number" id="randomState" class="form-control" value="42" min="0">
+                <small>Seed for reproducibility</small>
+            </div>
+            
+            <button onclick="trainModel()" class="btn btn-success btn-large">Train Model</button>
+        </div>
+        
+        <div id="resultsSection" class="training-section" style="display: none;">
+            <h2>3. Model Performance Metrics</h2>
+            <div id="metricsDisplay" class="metrics-container"></div>
+            
+            <div class="success-message">
+                <p>✓ Model trained successfully!</p>
+                <a href="{{ url_for('predict') }}" class="btn btn-primary">Go to Prediction →</a>
+            </div>
+        </div>
+        
+        <div class="navigation">
+            <a href="{{ url_for('preprocessing') }}" class="btn btn-secondary">← Back</a>
+        </div>
+        
+        <div id="message" class="message"></div>
+        <div id="loadingSpinner" class="loading-spinner" style="display: none;">
+            <div class="spinner"></div>
+            <p>Training model...</p>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/training.js') }}"></script>
+</body>
+</html>

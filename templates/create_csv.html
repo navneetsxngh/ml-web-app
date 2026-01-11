@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ML Web App - Create CSV</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1 class="page-title">Create Your Dataset</h1>
+        <p class="page-description">Define columns and add rows of data</p>
+        
+        <div class="form-section">
+            <div class="form-group">
+                <label>Column Names (comma-separated):</label>
+                <input type="text" id="columnNames" class="form-control" placeholder="e.g., Age, Gender, Salary, Experience">
+                <button onclick="createColumns()" class="btn btn-primary" style="margin-top: 10px;">Create Columns</button>
+            </div>
+            
+            <div id="dataEntry" style="display: none;">
+                <h3>Enter Data</h3>
+                <div id="rowForm"></div>
+                <button onclick="addRow()" class="btn btn-success">Add Row</button>
+                
+                <div id="dataPreview" style="margin-top: 20px;">
+                    <h3>Data Preview</h3>
+                    <div class="table-container">
+                        <table id="previewTable" class="table">
+                            <thead id="tableHead"></thead>
+                            <tbody id="tableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <button onclick="saveData()" class="btn btn-primary" style="margin-top: 20px;">Save & Continue</button>
+            </div>
+        </div>
+        
+        <div class="navigation">
+            <a href="{{ url_for('data_source') }}" class="btn btn-secondary">← Back</a>
+        </div>
+        
+        <div id="message" class="message"></div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/create_csv.js') }}"></script>
+</body>
+</html>
