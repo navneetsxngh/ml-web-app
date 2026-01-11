@@ -1,6 +1,8 @@
 from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import mysql.connector
 from mysql.connector import Error
+import psycopg2
+from psycopg2 import Error
 import pandas as pd
 import numpy as np
 import json
@@ -34,13 +36,21 @@ app.config['MAX_CONTENT_LENGTH'] = int(os.getenv('MAX_CONTENT_LENGTH', 64 * 1024
 # Database Configuration - Automatically loads from .env file
 # Make sure you've configured your .env file with your MySQL credentials
 # See ENV_SETUP_GUIDE.md or run: python setup_env.py
-DB_CONFIG = {
-    'host': os.getenv('DB_HOST', 'localhost'),
-    'port': int(os.getenv('DB_PORT', 3306)),
-    'user': os.getenv('DB_USER', 'root'),
-    'password': os.getenv('DB_PASSWORD', 'password'),  # Loaded from .env file
-    'database': os.getenv('DB_NAME', 'ml_webapp_db')
-}
+# For PostgreSQL
+DATABASE_URL = os.getenv('DATABASE_URL', '')
+
+if DATABASE_URL:
+    # Production: Use Render PostgreSQL connection string
+    DB_CONFIG = DATABASE_URL
+else:
+    # Local development: Use individual parameters
+    DB_CONFIG = {
+        'host': os.getenv('DB_HOST', 'localhost'),
+        'port': int(os.getenv('DB_PORT', 5432)),
+        'user': os.getenv('DB_USER', 'postgres'),
+        'password': os.getenv('DB_PASSWORD', 'password'),
+        'database': os.getenv('DB_NAME', 'ml_webapp_db')
+    }
 
 # Allowed file extensions
 ALLOWED_EXTENSIONS = {'csv', 'json', 'xml'}
@@ -51,28 +61,34 @@ def allowed_file(filename):
 def get_db_connection():
     """Create and return a database connection"""
     try:
-        connection = mysql.connector.connect(**DB_CONFIG)
+        if isinstance(DB_CONFIG, str):
+            # Using DATABASE_URL (production)
+            connection = psycopg2.connect(DB_CONFIG)
+        else:
+            # Using individual parameters (local)
+            connection = psycopg2.connect(
+                host=DB_CONFIG['host'],
+                port=DB_CONFIG['port'],
+                user=DB_CONFIG['user'],
+                password=DB_CONFIG['password'],
+                database=DB_CONFIG['database']
+            )
         return connection
     except Error as e:
-        print(f"Error connecting to MySQL: {e}")
+        print(f"Error connecting to PostgreSQL: {e}")
         return None
 
 def init_database():
     """Initialize the database if it doesn't exist"""
     try:
-        # Connect without specifying database
-        conn = mysql.connector.connect(
-            host=DB_CONFIG['host'],
-            user=DB_CONFIG['user'],
-            password=DB_CONFIG['password']
-        )
-        cursor = conn.cursor()
-        cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DB_CONFIG['database']}")
-        cursor.close()
-        conn.close()
-        print(f"Database '{DB_CONFIG['database']}' is ready.")
+        # For PostgreSQL, database is already created by Render
+        # Just verify connection
+        conn = get_db_connection()
+        if conn:
+            print(f"Database connection is ready.")
+            conn.close()
     except Error as e:
-        print(f"Error creating database: {e}")
+        print(f"Error connecting to database: {e}")
 
 def save_dataframe_to_db(df, table_name):
     """Save a pandas DataFrame to MySQL database"""

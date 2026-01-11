@@ -3,7 +3,8 @@ Database Setup Script
 Run this script to verify MySQL connection and initialize the database
 Now automatically reads credentials from .env file!
 """
-
+import psycopg2
+from psycopg2 import Error
 import mysql.connector
 from mysql.connector import Error
 import os
@@ -13,72 +14,80 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Database Configuration - Automatically loaded from .env file
-DB_CONFIG = {
-    'host': os.getenv('DB_HOST', 'localhost'),
-    'user': os.getenv('DB_USER', 'root'),
-    'password': os.getenv('DB_PASSWORD', 'password'),
-}
+DATABASE_URL = os.getenv('DATABASE_URL', '')
+
+if DATABASE_URL:
+    DB_CONFIG = DATABASE_URL
+else:
+    DB_CONFIG = {
+        'host': os.getenv('DB_HOST', 'localhost'),
+        'port': int(os.getenv('DB_PORT', 5432)),
+        'user': os.getenv('DB_USER', 'postgres'),
+        'password': os.getenv('DB_PASSWORD', 'password'),
+        'database': os.getenv('DB_NAME', 'ml_webapp_db')
+    }
 
 DATABASE_NAME = os.getenv('DB_NAME', 'ml_webapp_db')
 
 def test_connection():
-    """Test MySQL connection"""
-    print("Testing MySQL connection...")
+    """Test PostgreSQL connection"""
+    print("Testing PostgreSQL connection...")
     try:
-        connection = mysql.connector.connect(
-            host=DB_CONFIG['host'],
-            user=DB_CONFIG['user'],
-            password=DB_CONFIG['password']
-        )
+        if isinstance(DB_CONFIG, str):
+            connection = psycopg2.connect(DB_CONFIG)
+        else:
+            connection = psycopg2.connect(
+                host=DB_CONFIG['host'],
+                port=DB_CONFIG['port'],
+                user=DB_CONFIG['user'],
+                password=DB_CONFIG['password'],
+                database=DB_CONFIG.get('database', 'postgres')
+            )
         
-        if connection.is_connected():
-            db_info = connection.get_server_info()
-            print(f"✓ Successfully connected to MySQL Server version {db_info}")
+        if connection:
+            print(f"✓ Successfully connected to PostgreSQL Server")
             
             cursor = connection.cursor()
-            cursor.execute("SELECT DATABASE();")
+            cursor.execute("SELECT version();")
             record = cursor.fetchone()
-            print(f"✓ Current database: {record}")
+            print(f"✓ PostgreSQL version: {record[0]}")
             
             cursor.close()
             connection.close()
             return True
     except Error as e:
-        print(f"✗ Error connecting to MySQL: {e}")
+        print(f"✗ Error connecting to PostgreSQL: {e}")
         print("\nPlease check:")
-        print("1. MySQL Server is running")
+        print("1. PostgreSQL Server is running")
         print("2. Your .env file is configured correctly")
-        print("3. Run 'python setup_env.py' if you haven't set up .env yet")
-        print("4. Username and password in .env are correct")
-        print("5. MySQL is accessible on localhost:3306")
+        print("3. Username and password in .env are correct")
         return False
 
 def create_database():
-    """Create the application database"""
-    print(f"\nCreating database '{DATABASE_NAME}'...")
+    """Verify database (PostgreSQL on Render creates it automatically)"""
+    print(f"\nVerifying database connection...")
     try:
-        connection = mysql.connector.connect(
-            host=DB_CONFIG['host'],
-            user=DB_CONFIG['user'],
-            password=DB_CONFIG['password']
-        )
+        if isinstance(DB_CONFIG, str):
+            connection = psycopg2.connect(DB_CONFIG)
+        else:
+            connection = psycopg2.connect(
+                host=DB_CONFIG['host'],
+                port=DB_CONFIG['port'],
+                user=DB_CONFIG['user'],
+                password=DB_CONFIG['password'],
+                database=DB_CONFIG.get('database', 'postgres')
+            )
         
         cursor = connection.cursor()
-        cursor.execute(f"CREATE DATABASE IF NOT EXISTS {DATABASE_NAME}")
-        print(f"✓ Database '{DATABASE_NAME}' created successfully")
-        
-        # Verify database exists
-        cursor.execute("SHOW DATABASES")
-        databases = [db[0] for db in cursor.fetchall()]
-        
-        if DATABASE_NAME in databases:
-            print(f"✓ Database '{DATABASE_NAME}' verified")
+        cursor.execute("SELECT current_database();")
+        db_name = cursor.fetchone()[0]
+        print(f"✓ Connected to database: {db_name}")
         
         cursor.close()
         connection.close()
         return True
     except Error as e:
-        print(f"✗ Error creating database: {e}")
+        print(f"✗ Error verifying database: {e}")
         return False
 
 def main():
