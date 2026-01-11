@@ -9,3 +9,4 @@ scikit-learn
 Werkzeug
 lxml
 python-dotenv
+psycopg2-binary
